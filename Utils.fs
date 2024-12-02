@@ -9,3 +9,9 @@ let splitLines (input: string) =
 /// Split input string into words. Removes empty entries.
 let splitWords (input: string) =
     input.Split([| ' ' |], StringSplitOptions.RemoveEmptyEntries)
+
+/// Split a single-line string into an integer array.
+let splitWordsToIntArray (line: string) =
+    line
+    |> splitWords
+    |> Array.map int

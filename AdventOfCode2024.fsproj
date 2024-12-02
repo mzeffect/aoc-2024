@@ -11,6 +11,7 @@
         <Compile Include="Day01a.fs" />
         <Compile Include="Day01b.fs" />
         <Compile Include="Day02a.fs" />
+        <Compile Include="Day02b.fs" />
         <Compile Include="Program.fs" />
         <Content Include="data\**" />
         <Content Include="Readme.md" />

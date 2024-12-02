@@ -1,7 +1,7 @@
 ﻿open AdventOfCode2024
 
 let solvers =
-    [ "01a", Day01a.solve; "01b", Day01b.solve; "02a", Day02a.solve ] |> Map.ofList
+    [ "01a", Day01a.solve; "01b", Day01b.solve; "02a", Day02a.solve; "02b", Day02b.solve ] |> Map.ofList
 
 let dayArg = System.Environment.GetCommandLineArgs().[1]
 

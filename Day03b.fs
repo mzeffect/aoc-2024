@@ -34,9 +34,9 @@ let doRanges (doPositions: int array) (dontPositions: int array) =
         | (pos, enable) :: rest ->
             if enable <> isEnabled then
                 if enable then // starts a new range
-                    buildRanges acc enable pos rest
+                    buildRanges acc true pos rest
                 else // ends the current range
-                    buildRanges ((start, pos) :: acc) enable pos rest
+                    buildRanges ((start, pos) :: acc) false pos rest
             else // continue range
                 buildRanges acc isEnabled start rest
 

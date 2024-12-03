@@ -2,6 +2,7 @@ module AdventOfCode2024.Day03b
 
 open System
 open System.Text.RegularExpressions
+open AdventOfCode2024.Utils
 
 /// returns all positions in the input where a regex matches
 let matchPositions (rx: Regex) (input: string) =
@@ -59,6 +60,6 @@ let solve (input: string) =
     multiplications
     |> Seq.filter (fun m ->
         let (pos, _, _) = m
-        validRanges |> Seq.exists (fun (a, b) -> a <= pos && pos < b))
+        validRanges |> Seq.exists (inRange pos))
     |> Seq.fold (fun acc (_, x, y) -> acc + (x * y)) 0
     |> string

@@ -15,3 +15,6 @@ let splitWordsToIntArray (line: string) =
     line
     |> splitWords
     |> Array.map int
+
+/// Returns whether a given value is in the given range (end exclusive).
+let inRange n (min, max) = min <= n && n < max

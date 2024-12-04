@@ -1,20 +1,12 @@
 module AdventOfCode2024.Day04b
 
 open AdventOfCode2024.Utils
-open AdventOfCode2024.Day04a
 
-/// Returns true if the given character array spells "MAS" in either direction.
-let isMAS (chars: char[]) =
-    (chars.[0] = 'M' && chars.[1] = 'A' && chars.[2] = 'S')
-    || (chars.[0] = 'S' && chars.[1] = 'A' && chars.[2] = 'M')
+let isMas = charsMatchStringUnidirectional "MAS"
 
-/// Returns the coordinates of all "MAS" midpoints (the A letters) in a shifted character grid (2D array)
-/// in any non-diagonal direction.
 let getXmasCoords grid shiftedGrid shiftDirection =
-    // transpose first, we are interested in the vertical direction only
-    let lines = gridCols shiftedGrid
+    let lines = byColumns shiftedGrid
 
-    // need the original grid dimensions so we can map the shifted/transposed coordinates back to the original
     let originalRows = Array2D.length1 grid
     let originalCols = Array2D.length2 grid
 
@@ -22,12 +14,11 @@ let getXmasCoords grid shiftedGrid shiftDirection =
     |> Seq.mapi (fun lineIndex line ->
         line
         |> Seq.windowed 3
-        |> Seq.mapi (fun windowIndex window ->
-            if isMAS window then
-                // we have a match, calculate the coordinate of "A" for the original grid
+        |> Seq.mapi (fun windowIndex chars ->
+            if isMas chars then
                 match shiftDirection with
                 | NoShift -> Some(windowIndex + 1, lineIndex)
-                | ShiftedLeft ->
+                | ShiftLeft ->
                     let row = windowIndex + 1
                     let col = lineIndex - (originalRows - 1 - row)
 
@@ -35,7 +26,7 @@ let getXmasCoords grid shiftedGrid shiftDirection =
                         Some(row, col)
                     else
                         None
-                | ShiftedRight ->
+                | ShiftRight ->
                     let row = windowIndex + 1
                     let col = lineIndex - row
 
@@ -50,18 +41,18 @@ let getXmasCoords grid shiftedGrid shiftDirection =
     |> List.ofSeq
 
 let solve (input: string) =
-    let grid = parseToGrid input
+    let grid = parseToMatrix input
 
-    let shiftLeft = shiftDiagonals ShiftedLeft
-    let shiftRight = shiftDiagonals ShiftedRight
+    let shiftLeft = diagonalToVerticalShift ShiftLeft
+    let shiftRight = diagonalToVerticalShift ShiftRight
 
-    let shiftedLeftVerticalCoords = getXmasCoords grid (shiftLeft grid) ShiftedLeft
-    let shiftedRightVerticalCoords = getXmasCoords grid (shiftRight grid) ShiftedRight
+    let leftShiftCoords = getXmasCoords grid (shiftLeft grid) ShiftLeft
+    let rightShiftCoords = getXmasCoords grid (shiftRight grid) ShiftRight
 
-    let allCoords = shiftedLeftVerticalCoords @ shiftedRightVerticalCoords
+    let allCoords = leftShiftCoords @ rightShiftCoords
 
     allCoords
-    |> List.countBy id // count occurence of each coordinate
-    |> List.where (fun (_, v) -> v = 2) // if we have two of the same coordinate, that's an "X"
+    |> List.countBy id
+    |> List.where (fun (_, v) -> v = 2) // if we have two of the same coordinate, that's an intersection
     |> List.length
     |> string

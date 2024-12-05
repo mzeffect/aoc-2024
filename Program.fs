@@ -1,45 +1,71 @@
-﻿open System.IO
+﻿open System
+open System.Diagnostics
+open System.IO
+open System.Threading
 open AdventOfCode2024.Solvers
 
 let solvers = getSolvers ()
 
-let dayArg = System.Environment.GetCommandLineArgs().[1]
-let dayId = dayArg.Substring(0, dayArg.Length - 1)
-let puzzleId = dayArg.Substring(3)
+let args = System.Environment.GetCommandLineArgs()
+let runArg = args.[1]
 
-let solveMethod = solvers[dayArg]
-let solve = fun input -> solveMethod.Invoke(null, [| input |]) :?> string
+let runSolver (dayArg: string) =
+    let dayId = dayArg.Substring(0, dayArg.Length - 1)
+    let puzzleId = dayArg.Substring(3)
 
-let exampleFiles =
-    Directory.GetFiles("data/" + dayId + "/examples")
-    |> Array.filter (fun f -> (not (f.EndsWith "_out.txt")))
-    |> Array.filter (fun f -> f.Contains puzzleId)
+    let solveMethod = solvers[dayArg]
+    let solve = fun input -> solveMethod.Invoke(null, [| input |]) :?> string
 
-printfn "Testing with examples..."
+    let input =
+        try
+            File.ReadAllText("data/" + dayId + "/input.txt")
+        with :? FileNotFoundException ->
+            printfn $"Input file for %s{dayId} not found"
+            ""
 
-exampleFiles
-|> Array.iter (fun f ->
-    let input = File.ReadAllText(f)
-    let output = solve input
-    let expectedOutput = File.ReadAllText(f.Replace(".txt", "_out.txt"))
+    if runArg <> "runAll" then
+        let exampleFiles =
+            Directory.GetFiles("data/" + dayId + "/examples")
+            |> Array.filter (fun f -> (not (f.EndsWith "_out.txt")))
+            |> Array.filter (fun f -> f.Contains puzzleId)
 
-    if output <> expectedOutput.TrimEnd() then
-        printfn $"❌  Example %s{f} failed"
-        printfn $"Expected: %s{expectedOutput.TrimEnd()}"
-        printfn $"Actual: %s{output}"
-    else
-        printfn $"✅  Example %s{f} passed")
+        printfn "Testing with examples..."
 
-let input =
-    try
-        File.ReadAllText("data/" + dayId + "/input.txt")
-    with :? FileNotFoundException ->
-        printfn $"Input file for %s{dayId} not found"
-        ""
+        exampleFiles
+        |> Array.iter (fun f ->
+            let input = File.ReadAllText(f)
+            let output = solve input
+            let expectedOutput = File.ReadAllText(f.Replace(".txt", "_out.txt"))
 
-if input.Length = 0 then
-    // no input file found, exit
-    exit 1
+            if output <> expectedOutput.TrimEnd() then
+                printfn $"❌  Example %s{f} failed"
+                printfn $"Expected: %s{expectedOutput.TrimEnd()}"
+                printfn $"Actual: %s{output}"
+            else
+                printfn $"✅  Example %s{f} passed")
 
-printfn "Solution for puzzle input:"
-printfn $"%s{solve input}"
+
+
+        if input.Length = 0 then
+            // no input file found, exit
+            exit 1
+
+        printfn "Solution for puzzle input:"
+        printfn $"%s{solve input}"
+        
+    // force garbage collection before benchmarking
+    GC.Collect()
+    GC.WaitForPendingFinalizers()
+    Thread.Sleep(100)
+    let sw = Stopwatch.StartNew()
+    for i = 1 to 100 do
+        solve input |> ignore
+    sw.Stop()
+    printfn $"Average runtime <%s{dayArg}>: %f{sw.Elapsed.TotalMilliseconds / float 100}ms"
+
+if runArg = "runAll" then
+    for solver in solvers do
+        runSolver solver.Key
+
+else
+    runSolver runArg

@@ -10,14 +10,36 @@ let splitLines (input: string) =
 let splitWords (input: string) =
     input.Split([| ' ' |], StringSplitOptions.RemoveEmptyEntries)
 
+let splitWordsBy (separator: char) (input: string) =
+    input.Split([| separator |], StringSplitOptions.RemoveEmptyEntries)
+
 /// Split a single-line string into an integer array.
-let splitWordsToIntArray (line: string) =
-    line
-    |> splitWords
-    |> Array.map int
+let splitWordsToIntArray (line: string) = line |> splitWords |> Array.map int
+
+let splitWordsToIntArrayBy (separator: char) (line: string) =
+    line |> splitWordsBy separator |> Array.map int
+
+let splitByEmptyLines (input: string) =
+    input.Split([| "\n\n" |], StringSplitOptions.RemoveEmptyEntries)
 
 /// Returns whether a given value is in the given range (end exclusive).
 let inRange n (min, max) = min <= n && n < max
+
+// Array operations
+
+let getMiddleElement (arr: 'a[]) =
+    let middleIndex = Array.length arr / 2
+    arr.[middleIndex]
+
+// List operations
+
+/// Moves an element from one index to another in a list
+/// There is probably a better way to do this...
+let moveElement list fromIndex toIndex =
+    let element = List.item fromIndex list
+    let listWithoutElement = List.removeAt fromIndex list
+    let (before, after) = List.splitAt toIndex listWithoutElement
+    before @ [ element ] @ after
 
 // Matrix operations
 
@@ -37,7 +59,7 @@ let parseToMatrix (input: string) =
 let transpose (arr: 'a[,]) =
     let rows = Array2D.length1 arr
     let cols = Array2D.length2 arr
-    Array2D.init cols rows (fun i j -> arr.[j,i])
+    Array2D.init cols rows (fun i j -> arr.[j, i])
 
 /// Returns an array of all rows of a matrix.
 let byRows grid =
@@ -46,7 +68,7 @@ let byRows grid =
 /// Returns an array of all columns of a matrix.
 let byColumns grid =
     Array.init (Array2D.length2 grid) (fun j -> grid.[*, j])
-    
+
 /// Returns a new grid with rows shifted in such a way that diagonals become verticals.
 /// Pads the grid with '.', a character we don't care about.
 let diagonalToVerticalShift shiftDirection (grid: char[,]) =
@@ -58,7 +80,7 @@ let diagonalToVerticalShift shiftDirection (grid: char[,]) =
         let col = c - (if shiftDirection = ShiftRight then r else (rows - 1 - r))
 
         if col >= 0 && col < cols then grid.[r, col] else padding)
-    
+
 /// Returns whether the given character array matches the given string.
 let charsMatchString (str: string) (chars: char[]) =
     let patternArray = str.ToCharArray()

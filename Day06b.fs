@@ -1,5 +1,6 @@
 module AdventOfCode2024.Day06b
 
+open System
 open System.Collections.Generic
 open AdventOfCode2024.Utils
 open AdventOfCode2024.Day06a
@@ -52,6 +53,9 @@ let solve (input: string) =
     let hasLoop = walkHasInfiniteLoop map startingOrientation startingPos
 
     candidates
-    |> Seq.filter hasLoop
-    |> Seq.length
+    |> Seq.toArray
+    |> Array.splitInto (Environment.ProcessorCount / 3 + 1)
+    |> Array.Parallel.map (fun chunk ->
+        chunk |> Array.filter hasLoop |> Array.length)
+    |> Array.sum
     |> string

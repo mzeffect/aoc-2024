@@ -51,7 +51,10 @@ let runSolver (dayArg: string) =
             exit 1
 
         printfn "Solution for puzzle input:"
+        let sw = Stopwatch.StartNew()
         printfn $"%s{solve input}"
+        sw.Stop()
+        printfn $"Solver runtime <%s{dayArg}>: %f{sw.Elapsed.TotalMilliseconds}ms"
     else
         // force garbage collection before benchmarking
         GC.Collect()

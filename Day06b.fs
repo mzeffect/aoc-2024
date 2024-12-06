@@ -1,38 +1,39 @@
 module AdventOfCode2024.Day06b
 
+open System.Collections.Generic
 open AdventOfCode2024.Utils
 open AdventOfCode2024.Day06a
 
-let thingAtPosWithObstacle (m: char[,]) (additionalObstaclePos: Pos) (pos: Pos) =
+let thingAtPosWithExtraObstacle (m: char[,]) (additionalObstaclePos: Pos) (pos: Pos) =
     if pos = additionalObstaclePos then
         Obstacle
     else
         thingAtPos m pos
 
-let rec walkHasInfiniteLoop
-    (map: char[,])
-    (additionalObstaclePos: Pos)
-    (orientation: Orientation)
-    (currentPos: Pos)
-    (visited: Set<Pos * Orientation>)
-    =
-    if Set.contains (currentPos, orientation) visited then
-        true
-    else
-        let nextPosition = move orientation currentPos
+let walkHasInfiniteLoop (map: char[,]) (startingOrientation: Orientation) (startingPos: Pos) (extraObstaclePos: Pos) =
+    let visited = HashSet<Pos * Orientation>()
 
-        let nextAction =
-            match thingAtPosWithObstacle map additionalObstaclePos nextPosition with
-            | Obstacle -> Turn Right
-            | Wall -> Stop
-            | _ -> Move nextPosition
+    let rec recur (currentPos: Pos) (orientation: Orientation) =
+        if visited.Contains((currentPos, orientation)) then
+            true
+        else
+            let nextPosition = move orientation currentPos
+            let nextThing = nextPosition |> thingAtPosWithExtraObstacle map extraObstaclePos
 
-        let visitedWithCurrent = Set.add (currentPos, orientation) visited
+            let nextAction =
+                match nextThing with
+                | Obstacle -> Turn Right
+                | Wall -> Stop
+                | _ -> Move nextPosition
 
-        match nextAction with
-        | Move nextPosition -> walkHasInfiniteLoop map additionalObstaclePos orientation nextPosition visitedWithCurrent
-        | Turn dir -> walkHasInfiniteLoop map additionalObstaclePos (turn dir orientation) currentPos visitedWithCurrent
-        | Stop -> false
+            visited.Add((currentPos, orientation)) |> ignore
+
+            match nextAction with
+            | Move nextPosition -> recur nextPosition orientation
+            | Turn dir -> recur currentPos (turn dir orientation)
+            | Stop -> false
+
+    recur startingPos startingOrientation
 
 let isEmpty c = (=) (identifyThing c) Nothing
 
@@ -40,14 +41,17 @@ let solve (input: string) =
     let map = parseToMatrix input
 
     let startingPos = map |> findOnePosition isGuard
-    let emptyPositions = map |> findPositions isEmpty |> Set.ofSeq
+    let startingOrientation = North
+    let emptyPositions = map |> findPositions isEmpty |> HashSet
 
-    let originalRoute = walk map North startingPos [ startingPos ]
+    let originalVisitedPositions = walk map startingOrientation startingPos
 
-    let candidateObstaclePositions =
-        Set.intersect emptyPositions (Set.ofList originalRoute) |> Set.toSeq
-        
-    candidateObstaclePositions
-    |> Seq.filter (fun emptyPos -> walkHasInfiniteLoop map emptyPos North startingPos Set.empty)
+    let candidates = emptyPositions
+    candidates.IntersectWith(originalVisitedPositions)
+    
+    let hasLoop = walkHasInfiniteLoop map startingOrientation startingPos
+
+    candidates
+    |> Seq.filter hasLoop
     |> Seq.length
     |> string

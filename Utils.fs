@@ -1,6 +1,7 @@
 module AdventOfCode2024.Utils
 
 open System
+open System.Collections.Generic
 
 /// Split input string into lines. Removes empty lines.
 let splitLines (input: string) =
@@ -132,3 +133,6 @@ let findPositions predicate matrix =
         
 let findOnePosition predicate matrix =
     matrix |> findPositions predicate |> Seq.head
+    
+let hashSetCount (set: HashSet<'a>) =
+    set.Count

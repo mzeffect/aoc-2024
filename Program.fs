@@ -58,10 +58,10 @@ let runSolver (dayArg: string) =
         GC.WaitForPendingFinalizers()
         Thread.Sleep(100)
         let sw = Stopwatch.StartNew()
-        for i = 1 to 100 do
+        for i = 1 to 10 do
             solve input |> ignore
         sw.Stop()
-        printfn $"Average runtime <%s{dayArg}>: %f{sw.Elapsed.TotalMilliseconds / float 100}ms"
+        printfn $"Average runtime <%s{dayArg}>: %f{sw.Elapsed.TotalMilliseconds / float 10}ms"
 
 if runArg = "runAll" then
     for solver in solvers do

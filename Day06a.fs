@@ -1,5 +1,6 @@
 module AdventOfCode2024.Day06a
 
+open System.Collections.Generic
 open AdventOfCode2024.Utils
 
 type Thing =
@@ -33,24 +34,34 @@ let thingAtPos (m: char[,]) (pos: Pos) =
     else
         m.[x, y] |> identifyThing
 
-let rec walk (m: char[,]) (orientation: Orientation) (currentPos: Pos) (routeSoFar: Pos list) =
-    let nextPosition = move orientation currentPos
+let walk (map: char[,]) (startingOrientation: Orientation) (startingPos: Pos) =
+    let visited = HashSet<Pos>()
 
-    let nextAction =
-        match thingAtPos m nextPosition with
-        | Obstacle -> Turn Right
-        | Wall -> Stop
-        | _ -> Move nextPosition
+    let rec recur (currentPos: Pos) (orientation: Orientation) =
+        let nextPosition = move orientation currentPos
+        let nextThing = nextPosition |> thingAtPos map
 
-    match nextAction with
-    | Move nextPosition -> walk m orientation nextPosition (nextPosition :: routeSoFar)
-    | Turn dir -> walk m (turn dir orientation) currentPos routeSoFar
-    | Stop -> List.rev routeSoFar
+        let nextAction =
+            match nextThing with
+            | Obstacle -> Turn Right
+            | Wall -> Stop
+            | _ -> Move nextPosition
+
+        visited.Add(currentPos) |> ignore
+
+        match nextAction with
+        | Move nextPosition -> recur nextPosition orientation
+        | Turn dir -> recur currentPos (turn dir orientation)
+        | Stop -> visited
+
+    recur startingPos startingOrientation
 
 let solve (input: string) =
     let map = parseToMatrix input
 
     let startingPos = map |> findOnePosition isGuard
-    let route = walk map North startingPos [ startingPos ]
+    let startingOrientation = North
 
-    route |> Set.ofList |> Set.count |> string
+    let visitedPositions = walk map startingOrientation startingPos
+
+    visitedPositions |> hashSetCount |> string

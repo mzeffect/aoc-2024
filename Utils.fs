@@ -91,3 +91,34 @@ let charsMatchStringUnidirectional (str: string) (chars: char[]) =
     let patternArray = str.ToCharArray()
     chars = patternArray || chars = Array.rev patternArray
 
+type Pos = int * int
+
+type Orientation =
+    | North
+    | South
+    | East
+    | West
+
+type Dir =
+    | Left
+    | Right
+
+let turn (dir: Dir) (orientation: Orientation) =
+    match orientation, dir with
+    | North, Left -> West
+    | North, Right -> East
+    | South, Left -> East
+    | South, Right -> West
+    | East, Left -> North
+    | East, Right -> South
+    | West, Left -> South
+    | West, Right -> North
+
+let move (orientation: Orientation) (currentPos: Pos) =
+    let (x, y) = currentPos
+
+    match orientation with
+    | North -> (x - 1, y)
+    | South -> (x + 1, y)
+    | East -> (x, y + 1)
+    | West -> (x, y - 1)

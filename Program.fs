@@ -52,16 +52,16 @@ let runSolver (dayArg: string) =
 
         printfn "Solution for puzzle input:"
         printfn $"%s{solve input}"
-        
-    // force garbage collection before benchmarking
-    GC.Collect()
-    GC.WaitForPendingFinalizers()
-    Thread.Sleep(100)
-    let sw = Stopwatch.StartNew()
-    for i = 1 to 100 do
-        solve input |> ignore
-    sw.Stop()
-    printfn $"Average runtime <%s{dayArg}>: %f{sw.Elapsed.TotalMilliseconds / float 100}ms"
+    else
+        // force garbage collection before benchmarking
+        GC.Collect()
+        GC.WaitForPendingFinalizers()
+        Thread.Sleep(100)
+        let sw = Stopwatch.StartNew()
+        for i = 1 to 100 do
+            solve input |> ignore
+        sw.Stop()
+        printfn $"Average runtime <%s{dayArg}>: %f{sw.Elapsed.TotalMilliseconds / float 100}ms"
 
 if runArg = "runAll" then
     for solver in solvers do

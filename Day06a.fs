@@ -23,6 +23,8 @@ let identifyThing c =
     | '^' -> Guard
     | _ -> Nothing
 
+let isGuard c = (=) (identifyThing c) Guard
+
 let thingAtPos (m: char[,]) (pos: Pos) =
     let (x, y) = pos
 
@@ -30,13 +32,6 @@ let thingAtPos (m: char[,]) (pos: Pos) =
         Wall
     else
         m.[x, y] |> identifyThing
-
-let guardPosition (matrix: char[,]) =
-    matrix
-    |> Array2D.mapi (fun i j c -> (i, j, c))
-    |> Seq.cast<(int * int * char)>
-    |> Seq.find (fun (i, j, _c) -> (identifyThing matrix.[i, j]) = Guard)
-    |> fun (i, j, _) -> (i, j)
 
 let rec walk (m: char[,]) (orientation: Orientation) (currentPos: Pos) (routeSoFar: Pos list) =
     let nextPosition = move orientation currentPos
@@ -55,7 +50,7 @@ let rec walk (m: char[,]) (orientation: Orientation) (currentPos: Pos) (routeSoF
 let solve (input: string) =
     let map = parseToMatrix input
 
-    let startingPos = map |> guardPosition
+    let startingPos = map |> findOnePosition isGuard
     let route = walk map North startingPos [ startingPos ]
 
     route |> Set.ofList |> Set.count |> string

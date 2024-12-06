@@ -34,19 +34,13 @@ let rec walkHasInfiniteLoop
         | Turn dir -> walkHasInfiniteLoop map additionalObstaclePos (turn dir orientation) currentPos visitedWithCurrent
         | Stop -> false
 
-let emptyPositions matrix =
-    matrix
-    |> Array2D.mapi (fun i j c -> (i, j, c))
-    |> Seq.cast<(int * int * char)>
-    |> Seq.filter (fun (i, j, _c) -> thingAtPos matrix (i, j) = Nothing)
-    |> Seq.map (fun (i, j, _c) -> (i, j))
-    |> Set.ofSeq
+let isEmpty c = (=) (identifyThing c) Nothing
 
 let solve (input: string) =
     let map = parseToMatrix input
 
-    let startingPos = map |> guardPosition
-    let emptyPositions = emptyPositions map
+    let startingPos = map |> findOnePosition isGuard
+    let emptyPositions = map |> findPositions isEmpty |> Set.ofSeq
 
     let originalRoute = walk map North startingPos [ startingPos ]
 

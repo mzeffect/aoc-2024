@@ -122,3 +122,13 @@ let move (orientation: Orientation) (currentPos: Pos) =
     | South -> (x + 1, y)
     | East -> (x, y + 1)
     | West -> (x, y - 1)
+
+let findPositions predicate matrix =
+    matrix
+    |> Array2D.mapi (fun i j v -> (i, j, v))
+    |> Seq.cast<(int * int * char)>
+    |> Seq.filter (fun (_, _, v) -> (predicate v))
+    |> Seq.map (fun (i, j, _) -> (i, j))
+        
+let findOnePosition predicate matrix =
+    matrix |> findPositions predicate |> Seq.head

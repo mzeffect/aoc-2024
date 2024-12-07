@@ -1,5 +1,4 @@
-﻿open System
-open System.Diagnostics
+﻿open System.Diagnostics
 open System.IO
 open System.Threading
 open AdventOfCode2024.Solvers
@@ -56,9 +55,6 @@ let runSolver (dayArg: string) =
         sw.Stop()
         printfn $"Solver runtime <%s{dayArg}>: %f{sw.Elapsed.TotalMilliseconds}ms"
     else
-        // force garbage collection before benchmarking
-        GC.Collect()
-        GC.WaitForPendingFinalizers()
         Thread.Sleep(100)
         let sw = Stopwatch.StartNew()
         for i = 1 to 10 do

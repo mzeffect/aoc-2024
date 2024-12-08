@@ -21,6 +21,9 @@ let runSolver (dayArg: string) =
         with :? FileNotFoundException ->
             printfn $"Input file for %s{dayId} not found"
             ""
+            
+    // run once so solver gets JIT'd before benchmarking
+    solve input |> ignore
 
     if runArg <> "runAll" then
         let exampleFiles =

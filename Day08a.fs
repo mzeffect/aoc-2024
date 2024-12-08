@@ -14,9 +14,14 @@ type AntinodeGenerator = (int * int) -> Pos -> Pos -> Pos list
 
 let getAntinodes (gridDim: int * int) (p1: Pos) (p2: Pos) =
     let direction = Vec.subtract p2 p1
-
-    [ Vec.add p1 direction; Vec.add p2 (Vec.scale -1 direction) ]
-    |> List.filter (not << isOutsideGridDimensions gridDim)
+    let antinode1 = Vec.add p1 direction
+    let antinode2 = Vec.add p2 (Vec.scale -1 direction)
+    
+    match isOutsideGridDimensions gridDim antinode1, isOutsideGridDimensions gridDim antinode2 with
+    | false, false -> [antinode1; antinode2]
+    | false, true -> [antinode1]
+    | true, false -> [antinode2]
+    | true, true -> []
 
 let getAntinodesByFrequency (gridDim: int * int) (generateAntinodes: AntinodeGenerator) (antennaPositionsByFrequency) =
     antennaPositionsByFrequency

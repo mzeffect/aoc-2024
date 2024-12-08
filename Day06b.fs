@@ -30,7 +30,7 @@ let walkHasInfiniteLoop
             let nextThing =
                 if startingObstaclePositions.Contains nextPosition then Obstacle
                 else if extraObstaclePos = nextPosition then Obstacle
-                else if nextPosition |> isOutside map then Wall
+                else if nextPosition |> isOutsideGrid map then Wall
                 else Nothing
 
             let nextAction =

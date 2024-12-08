@@ -14,10 +14,6 @@ type Action =
     | Turn of Dir
     | Stop
 
-let isOutside (m: char[,]) (pos: Pos) =
-    let (x, y) = pos
-    x < 0 || x >= Array2D.length1 m || y < 0 || y >= Array2D.length2 m
-
 let identifyThing c =
     match c with
     | '#' -> Obstacle
@@ -29,7 +25,7 @@ let isGuard c = (=) (identifyThing c) Guard
 let thingAtPos (m: char[,]) (pos: Pos) =
     let (x, y) = pos
 
-    if isOutside m (x, y) then
+    if isOutsideGrid m (x, y) then
         Wall
     else
         m.[x, y] |> identifyThing

@@ -56,6 +56,16 @@ let parseToMatrix (input: string) =
     let (width, height) = lines.[0].Length, lines.Length
     Array2D.init width height (fun x y -> lines.[x].[y])
 
+/// Returns a matrix from parsing input string where each character of each line is a value.
+/// Assumes all lines have the same length.
+let parseToMatrixWith (parseElement: char -> 'a) (input: string) =
+    let lines = splitLines input
+    let (width, height) = lines.[0].Length, lines.Length
+    Array2D.init width height (fun x y -> lines.[x].[y] |> parseElement)
+    
+let gridSize (arr: 'a[,]) =
+    arr |> Array2D.length1, arr |> Array2D.length2
+
 /// Returns a transposed matrix.
 let transpose (arr: 'a[,]) =
     let rows = Array2D.length1 arr
@@ -123,16 +133,53 @@ let move (orientation: Orientation) (currentPos: Pos) =
     | South -> (x + 1, y)
     | East -> (x, y + 1)
     | West -> (x, y - 1)
+    
+let isOutsideGrid (m: 'a[,]) (pos: Pos) =
+    let (x, y) = pos
+    x < 0 || x >= Array2D.length1 m || y < 0 || y >= Array2D.length2 m
+    
+let isOutsideGridDimensions (dim: int * int) (pos: Pos) =
+    let (x, y) = pos
+    x < 0 || x >= fst dim || y < 0 || y >= snd dim
 
-let findPositions predicate matrix =
+let findPositions (predicate: 'a -> bool) matrix : Pos seq =
     matrix
     |> Array2D.mapi (fun i j v -> (i, j, v))
-    |> Seq.cast<(int * int * char)>
+    |> Seq.cast<(int * int * 'a)>
     |> Seq.filter (fun (_, _, v) -> (predicate v))
     |> Seq.map (fun (i, j, _) -> (i, j))
-        
+
+let distance (x1, y1) (x2, y2) = abs (x1 - x2) + abs (y1 - y2)
+
 let findOnePosition predicate matrix =
     matrix |> findPositions predicate |> Seq.head
-    
-let hashSetCount (set: HashSet<'a>) =
-    set.Count
+
+let hashSetCount (set: HashSet<'a>) = set.Count
+
+type Vec = int * int
+
+module Vec =
+    let subtract (x1,y1) (x2,y2) : Vec = 
+        (x2 - x1, y2 - y1)  // Vector from p1 to p2
+        
+    let add (x1,y1) (x2,y2) : Pos = 
+        (x1 + x2, y1 + y2)
+        
+    let scale n (x,y) : Vec =
+        (n*x, n*y)
+        
+    let manhattan (x,y) = 
+        abs x + abs y
+        
+    let length (x,y) =
+        sqrt(float(x * x + y * y))
+        
+    // Some common vectors
+    let up = (0,-1)
+    let down = (0,1)
+    let left = (-1,0)
+    let right = (1,0)
+
+let logWith (f: string) (thing: 'a) =
+    printfn $"%s{f}: %A{thing}"
+    thing

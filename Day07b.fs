@@ -12,7 +12,7 @@ type OpResult = uint64
 
 let ops = [ Add; Multiply; Concat ]
 
-let concatNums (a: uint64) (b: uint64) = (a |> string) + (b |> string) |> uint64
+let concatNums a b : Num = (a |> string) + (b |> string) |> uint64
 
 let applyOp =
     function
@@ -27,17 +27,17 @@ let rec generateAllOps nums : Op list seq =
         generateAllOps (Array.tail nums)
         |> Seq.collect (fun restOps -> ops |> List.map (fun op -> op :: restOps))
 
-let applyOps nums ops maxValue : OpResult =
+let applyOps (nums: Num seq) (ops: Op list) (target: Num) : OpResult =
     let numsArray = nums |> Seq.toArray
 
-    let rec apply (current: uint64 array) (ops: Op list) =
+    let rec apply (current: Num array) (ops: Op list) =
         match current.Length, ops with
         | _, []
         | 1, _ -> current.[0]
         | _, op :: restOps ->
             let result = (applyOp op) current.[0] current.[1]
 
-            if result > maxValue then
+            if result > target then
                 result
             else
                 let newNums = Array.append [| result |] current.[2..]
@@ -45,7 +45,7 @@ let applyOps nums ops maxValue : OpResult =
 
     apply numsArray ops
 
-let canProduceWithConcat (target: uint64, nums: uint64 seq) =
+let canProduceWithConcat (target: Num, nums: Num seq) =
     let numsArray = nums |> Seq.toArray
 
     generateAllOps numsArray

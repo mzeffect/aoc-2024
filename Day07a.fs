@@ -2,8 +2,8 @@ module AdventOfCode2024.Day07a
 
 open AdventOfCode2024.Utils
 
-type TargetValue = uint64
-type TestCase = TargetValue * uint64 seq
+type Num = uint64
+type TestCase = Num * Num seq
 
 let parseInput (input: string): TestCase array =
     input

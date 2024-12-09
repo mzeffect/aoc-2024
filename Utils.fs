@@ -20,6 +20,10 @@ let splitWordsToIntArray (line: string) = line |> splitWords |> Array.map int
 let splitWordsToIntArrayBy (separator: char) (line: string) =
     line |> splitWordsBy separator |> Array.map int
 
+let splitToIntArray (input: string) : int[] =
+    input.ToCharArray()
+    |> Array.map (fun c -> int c - int '0')
+
 let splitByEmptyLines (input: string) =
     input.Split([| "\n\n" |], StringSplitOptions.RemoveEmptyEntries)
 

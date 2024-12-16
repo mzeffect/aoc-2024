@@ -6,8 +6,8 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="notebook/Array2DFormatter.fs" />
     <Compile Include="Utils.fs" />
-    <Compile Include="NotebookUtils.fs" />
     <Compile Include="Day01a.fs" />
     <Compile Include="Day01b.fs" />
     <Compile Include="Day02a.fs" />
@@ -26,6 +26,7 @@
     <Compile Include="Day08b.fs" />
     <Compile Include="Day09a.fs" />
     <Compile Include="Day09b.fs" />
+    <Compile Include="Day10a.fs" />
     <Compile Include="Solvers.fs" />
     <Compile Include="Program.fs" />
     <Content Include="data\**" />

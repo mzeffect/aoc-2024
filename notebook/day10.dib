@@ -1,0 +1,237 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"aliases":[],"name":"csharp"}]}}
+
+#!markdown
+
+## Day 10
+
+#!fsharp
+
+#load "../Utils.fs"
+#load "./Array2DFormatter.fs"
+open System
+open System.Threading
+open System.Collections.Generic
+open NotebookUtils
+open AdventOfCode2024.Utils 
+
+#!fsharp
+
+let parseDay10Input (fileName: string) =
+    File.ReadAllText(fileName)
+    |> parseToMatrixWith charToInt
+
+#!markdown
+
+### Part 1
+
+#!fsharp
+
+type HikeSegment =
+    | Start of int
+    | Mid of int
+    | Peak of int
+
+#!fsharp
+
+// Display stylers
+
+let gridStyler : Style.CellStyler<int> = (fun i j v ->
+    match v with
+    | 0 -> "background-color: lightgray; color: black"
+    | 9 -> "background-color: lightgreen; color: black"
+    | _ -> "")
+
+let heightStyle : Style.CellStyler<int> =
+    fun _ _ h ->
+        let lightness = 100 - (h * 10)  // Background lightness (100 = white, 0 = black)
+        let textColor = if lightness < 50 then "white" else "black"  // Text white on dark, black on light
+        sprintf "background-color: hsl(0, 0%%, %d%%); color: %s" lightness textColor
+
+let hikeMapStyler : Style.CellStyler<HikeSegment> = (fun i j v ->
+    match v with
+    | Start h
+    | Peak h
+    | Mid h -> heightStyle 0 0 h)
+
+registerArrayFormatter<HikeSegment>()
+
+#!markdown
+
+#### Example input
+
+#!fsharp
+
+let grid = parseDay10Input "../data/Day10/examples/10a.txt"
+
+(grid, heightStyle) |> display
+
+#!fsharp
+
+// convert the grid to a HikeMap
+let toHikeMap grid =
+    grid |> Array2D.map (function
+        | 0 -> Start 0
+        | 9 -> Peak 9
+        | height -> Mid height)
+
+let map = toHikeMap grid
+(map, hikeMapStyler) |> display
+
+#!fsharp
+
+let validNextDirections (map: HikeSegment[,]) (currentPos: Pos) (currentSegment: HikeSegment) =
+    let isValidNext (dir: Orientation) =
+        let nextPos = move dir currentPos
+        if isOutsideGrid map nextPos then false
+        else
+            let x, y = nextPos
+            let nextSegment = map.[x, y]
+            match currentSegment, nextSegment with
+            | Start h, Mid h' -> h' = h + 1
+            | Mid h, Mid h' -> h' = h + 1
+            | Mid h, Peak h' -> h' = h + 1
+            | _ -> false
+
+    [North; South; East; West]
+    |> List.filter isValidNext
+
+validNextDirections map (4, 4) (Mid 8)
+
+#!fsharp
+
+let discoverReachablePeaks (map: HikeSegment[,]) (startingPos: Pos) =
+    let rec recur (currentPos: Pos) (peaksReached: Pos list) (visited: HashSet<Pos>) =
+        if visited.Contains(currentPos) then
+            peaksReached
+        else
+            let (x, y) = currentPos
+            let segment = map.[x, y]
+            
+            match segment with
+            | Peak _ ->
+                currentPos :: peaksReached
+            | _ ->
+                visited.Add(currentPos) |> ignore
+                validNextDirections map currentPos segment
+                |> List.fold 
+                        (fun peaks dir -> 
+                            recur (move dir currentPos) peaks visited)
+                        peaksReached
+
+    recur startingPos [] (HashSet<Pos>())
+    |> Set.ofList
+
+(map, hikeMapStyler) |> display
+
+discoverReachablePeaks map (0, 4)
+
+#!fsharp
+
+let getTrailheadPositions (map: HikeSegment[,]) =
+    map
+    |> findPositions (function | Start _ -> true | _ -> false)
+
+getTrailheadPositions map
+
+#!fsharp
+
+// example solution
+map
+|> getTrailheadPositions
+|> Seq.map (discoverReachablePeaks map)
+|> Seq.map (Set.count)
+|> Seq.sum
+
+#!markdown
+
+#### Part 1 solution
+
+#!fsharp
+
+let inputGrid = parseDay10Input "../data/Day10/input.txt"
+
+(inputGrid, heightStyle) |> display
+
+#!fsharp
+
+open System.Diagnostics
+let inputMap = toHikeMap inputGrid
+
+let sw = Stopwatch.StartNew()
+inputMap
+|> getTrailheadPositions
+|> Seq.map (discoverReachablePeaks inputMap)
+|> Seq.map (Set.count)
+|> Seq.sum
+|> display
+
+sw.Stop()
+printfn $"Solver runtime <Day10>: %f{sw.Elapsed.TotalMilliseconds}ms"
+
+// 531 was the correct answer
+
+#!markdown
+
+### Part 2
+
+#!fsharp
+
+// this is very similar to part 1, but instead of accumulating peak coordinates
+// we can count how many times a peak is reached via the recursion
+let countUniquePathsToPeaks (map: HikeSegment[,]) (startingPos: Pos) =
+    let rec recur (currentPos: Pos) (visited: Dictionary<Pos, int>) =
+        if visited.ContainsKey(currentPos) then
+            visited.[currentPos]  // Return cached result for this position
+        else
+            let (x, y) = currentPos
+            let segment = map.[x, y]
+            
+            let result =
+                match segment with
+                | Peak _ -> 1
+                | _ ->
+                    validNextDirections map currentPos segment
+                    |> (fun dirs ->
+                        match dirs with
+                        | [] -> 0
+                        | _ -> 
+                            dirs
+                            |> List.sumBy (fun dir ->
+                                recur (move dir currentPos) visited))
+
+            visited.[currentPos] <- result
+            result
+
+    recur startingPos (Dictionary<Pos, int>())
+
+(map, hikeMapStyler) |> display
+
+countUniquePathsToPeaks map (0, 4)
+
+#!fsharp
+
+map
+|> getTrailheadPositions
+|> Seq.map (countUniquePathsToPeaks map)
+|> Seq.sum
+|> display
+
+#!markdown
+
+#### Part 2 solution
+
+#!fsharp
+
+let sw = Stopwatch.StartNew()
+
+inputMap
+|> getTrailheadPositions
+|> Seq.fold (fun acc trailhead -> acc + countUniquePathsToPeaks inputMap trailhead) 0
+|> display
+
+sw.Stop()
+printfn $"Solver runtime <Day10b>: %f{sw.Elapsed.TotalMilliseconds}ms"
+
+// 1210 was the correct solution

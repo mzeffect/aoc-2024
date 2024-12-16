@@ -66,6 +66,8 @@ let parseToMatrixWith (parseElement: char -> 'a) (input: string) =
     let lines = splitLines input
     let (width, height) = lines.[0].Length, lines.Length
     Array2D.init width height (fun x y -> lines.[x].[y] |> parseElement)
+
+let charToInt (c: char) = (int c) - (int '0')
     
 let gridSize (arr: 'a[,]) =
     arr |> Array2D.length1, arr |> Array2D.length2
@@ -75,6 +77,19 @@ let transpose (arr: 'a[,]) =
     let rows = Array2D.length1 arr
     let cols = Array2D.length2 arr
     Array2D.init cols rows (fun i j -> arr.[j, i])
+
+let findFirst (value: 'a) (array2d: 'a [,]) =
+    let rows = Array2D.length1 array2d
+    let cols = Array2D.length2 array2d
+    
+    seq {
+        for i in 0 .. rows - 1 do
+            for j in 0 .. cols - 1 do
+                if array2d.[i,j] = value then
+                    yield Some(i, j)
+    }
+    |> Seq.tryHead
+    |> Option.defaultValue None
 
 /// Returns an array of all rows of a matrix.
 let byRows grid =

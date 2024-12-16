@@ -1,0 +1,174 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"aliases":[],"name":"csharp"}]}}
+
+#!fsharp
+
+#load "../Utils.fs"
+#load "./Array2DFormatter.fs"
+open System
+open System.Threading
+open System.Collections.Generic
+open System.Text.RegularExpressions
+open NotebookUtils
+open AdventOfCode2024.Utils
+
+#!fsharp
+
+type Robot = {
+    Position: Pos;
+    Velocity: Vec;
+}
+
+type RoomSize = int * int
+
+// regexp that matches two integers in a string, and extracts them as ints
+let parseRobot (s: string) =
+    s
+    |> fun (s: string) ->
+        s.Split([|'='; ' '; ','|], StringSplitOptions.None)
+        |> fun (parts: string[]) ->
+            { Robot.Position = (int parts[2], int parts[1])
+              Velocity = (int parts[5], int parts[4]) }
+
+let parseDay14Input (fileName: string) =
+    File.ReadAllText(fileName)
+    |> splitLines
+    |> Seq.map (fun robotSpec -> parseRobot robotSpec)
+    |> Seq.toArray
+
+#!fsharp
+
+let exampleInput: Robot[] * RoomSize = parseDay14Input "../data/Day14/examples/14a.txt", (7, 11)
+exampleInput
+
+#!fsharp
+
+let moveWithTeleport (gridSize: RoomSize) (times: int) (fromPos: Pos) (velocity: Vec) =
+    let x, y = fromPos
+    let xv, yv = velocity
+    let xSize, ySize = gridSize
+    let newX = ((x + times * xv) % xSize + xSize) % xSize
+    let newY = ((y + times * yv) % ySize + ySize) % ySize
+    newX, newY
+
+#!fsharp
+
+moveWithTeleport (7, 11) 5 (4,2) (-3,2) |> display
+
+#!fsharp
+
+let robots, roomSize = exampleInput
+let moveInRoom100Times = moveWithTeleport roomSize 100
+let robotsAfter100Moves =
+    robots |> Seq.map (fun { Position = p; Velocity = v } -> moveInRoom100Times p v) |> Seq.toArray
+robotsAfter100Moves
+
+#!fsharp
+
+let isInRegion (rFrom: Pos) (rTo: Pos) (p: Pos) =
+    let (rFromX, rFromY) = rFrom
+    let (rToX, rToY) = rTo
+    let (x, y) = p
+    rFromX <= x && x <= rToX && rFromY <= y && y <= rToY
+
+#!fsharp
+
+let getQuadrantBounds (gridSize: RoomSize) =
+    let xSize, ySize = gridSize
+    let midX = xSize / 2
+    let midY = ySize / 2
+    [
+        // top left quad
+        ((0, 0), (midX - 1, midY - 1))
+        // top right quad
+        ((midX + 1, 0), (xSize - 1, midY - 1))
+        // bottom left quad
+        ((0, midY + 1), (midX - 1, ySize - 1))
+        // bottom right quad
+        ((midX + 1, midY + 1), (xSize - 1, ySize - 1))
+    ]
+    |> List.toArray
+
+#!fsharp
+
+getQuadrantBounds (5,5) |> printfn "%A"
+
+#!fsharp
+
+// example solution
+getQuadrantBounds roomSize
+|> Array.map (fun (qFrom, qTo) ->
+    robotsAfter100Moves
+    |> Array.filter (fun (robotPos) -> isInRegion qFrom qTo robotPos)
+    |> Array.length)
+|> Array.fold (*) 1
+
+#!fsharp
+
+// Part 1 solution
+let inputRobots, inputRoomSize = parseDay14Input "../data/Day14/input.txt", (103, 101)
+let moveInRoom100Times = moveWithTeleport inputRoomSize 100
+let inputRobotsAfter100Moves =
+    inputRobots |> Seq.map (fun { Position = p; Velocity = v } -> moveInRoom100Times p v) |> Seq.toArray
+
+getQuadrantBounds inputRoomSize
+|> Array.map (fun (qFrom, qTo) ->
+    inputRobotsAfter100Moves
+    |> Array.filter (fun (robotPos) -> isInRegion qFrom qTo robotPos)
+    |> Array.length)
+|> Array.fold (*) 1
+
+// correct solution was 216772608
+
+#!markdown
+
+### Part 2
+
+#!fsharp
+
+// wtf is a Christmas tree shape? Does it have a trunk? Or is it just the triangle
+// wtf is "*most of* the robots"?
+// I guess we can have a reverse version of `moveWithTeleport` that instead calculates the number of moves needed to get to a particular position, from the starting position.
+// Then, if we can calculate all the positions needed for the Christmas tree, we can find the minimum number of moves any robot needs to get to any of the tree positions.
+// of course, 1 robot can only be in 1 position at a time
+
+#!fsharp
+
+// Draw a Christmas tree into a 2DArray of a given size
+let drawChristmasTree (size: RoomSize) =
+    let sizeX, sizeY = size
+    let mutable tree = Array2D.create sizeX sizeY false
+    let midY = sizeY / 2
+    for x in 0..sizeX-1 do
+        if midY - x >= 0 then do
+            tree[x, midY - x] <- true
+            tree[x, midY + x] <- true
+        
+        if midY - x = 0 then do
+            for y in 1..sizeY-1 do
+                tree[x, y] <- true
+
+        if x = sizeX - 1 then do
+            tree[x, midY] <- true
+    tree
+
+let treeStyler: Style.CellStyler<bool> =
+    fun _ _ b -> if b then "background-color: darkgreen" else ""
+
+registerArrayFormatter<bool>()
+(drawChristmasTree (7, 11), treeStyler) |> display
+
+#!fsharp
+
+// see what's in input 1
+let drawRobotPositions (robots: Robot[]) (roomSize: RoomSize) =
+    let sizeX, sizeY = roomSize
+    let mutable tree = Array2D.create sizeX sizeY false
+    robots |> Array.iter (fun r ->
+        let x, y = r.Position
+        tree[x, y] <- true
+    )
+    tree
+inputRobots |> Array.length |> display
+(drawRobotPositions inputRobots (103, 101), treeStyler) |> display

@@ -1,0 +1,162 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"aliases":[],"name":"csharp"}]}}
+
+#!markdown
+
+## Day 11
+
+#!fsharp
+
+#load "../Utils.fs"
+#load "./Array2DFormatter.fs"
+open System
+open System.Threading
+open System.Collections.Generic
+open NotebookUtils
+open AdventOfCode2024.Utils 
+
+#!fsharp
+
+let parseDay11Input (fileName: string) =
+    File.ReadAllText(fileName)
+    |> splitWordsToIntArray
+    |> Array.map uint64
+
+#!markdown
+
+### Part 1
+
+#!fsharp
+
+let exampleInput = parseDay11Input "../data/Day11/examples/11a.txt"
+exampleInput
+
+#!fsharp
+
+let numDigits (n: uint64) =
+    uint64 (floor (log10 (float n))) + 1UL
+
+let isEven n = n % 2UL = 0UL
+
+let split (stone: uint64) (numDigits: uint64) =
+    let powerOf10 = numDigits / 2UL
+    let divisor = pown 10UL (int powerOf10)
+    [stone / divisor; stone % divisor]
+
+let stonesAfterBlink (stone: uint64) =
+    match stone with
+    | 0UL -> [1UL]
+    | n ->
+        match numDigits n with
+        | digits when digits |> isEven -> (split n digits)
+        | _ -> [n * 2024UL]
+
+#!fsharp
+
+numDigits 500UL |> display
+
+stonesAfterBlink 0UL |> List.toArray |> display
+stonesAfterBlink 1UL |> List.toArray |> display
+stonesAfterBlink 35UL |> List.toArray |> display
+stonesAfterBlink 113UL |> List.toArray |> display
+stonesAfterBlink 1000UL |> List.toArray |> display
+stonesAfterBlink 999UL |> List.toArray |> display
+
+#!fsharp
+
+let blinkTimes (blinkCount: int) (stones: uint64[]) =
+    let mutable stoneList = stones |> Array.toList
+    for i in 1 .. blinkCount do
+        stoneList <- stoneList |> List.collect stonesAfterBlink
+    stoneList
+
+#!fsharp
+
+exampleInput
+|> blinkTimes 25
+|> List.length
+
+#!markdown
+
+### Part 2
+
+#!fsharp
+
+// what happens to a 1 after x blinks?
+for i in 1..30 do
+    let a = blinkTimes i [| 1UL |]
+    let b = blinkTimes (i+1) [| 1UL |]
+    printfn "blink %d: %d %d - diff %d - %A" i (List.length a) (List.length b) (List.length b - List.length a) b
+
+#!fsharp
+
+blinkTimes 45 [| 1UL |]
+
+#!fsharp
+
+let log2024 = log10 2024.0
+let numDigitsAfterMult (n: uint64) (pow: int) =
+    log10 (float n) + (log2024 * float pow) |> floor |> int |> (+) 1
+
+#!fsharp
+
+(numDigitsAfterMult 1UL 75, 1UL*2024UL) |> display
+(numDigitsAfterMult 74623228416UL, 74623228416UL*2024UL) |> display
+
+#!fsharp
+
+let rec howManyStonesAfter (blinks: int) (n: uint64) (cache: Dictionary<uint64, int[]>) =
+    let recordFind (n: uint64) (afterBlinks: int) (numAngels: int) =
+        if cache.ContainsKey(n) then
+            //printfn "putting into cache %d (n: %d) - after %d" numAngels n afterBlinks
+            cache.[n][afterBlinks] <- numAngels
+        else
+            //printfn "creating cache for %d (n: %d) - after %d" numAngels n afterBlinks
+            let mutable initialCache = Array.create (blinks + 1) 0
+            initialCache.[afterBlinks] <- numAngels
+            cache.Add(n, initialCache)
+    
+    let tryFindInCache (n: uint64) (afterBlinks: int) =
+        if cache.ContainsKey(n) then
+           match  cache.[n].[afterBlinks] with
+           | 0 -> None
+           | x ->
+                //printfn "cache hit %d (n: %d) - after %d" x n afterBlinks
+                Some x
+        else
+           None
+
+    let mutable stones = [n]
+    for i in 1..blinks do
+        // 
+        let res = blinkTimes 1 (List.toArray stones)
+        res |> List.map (fun x ->
+            match tryFindInCache x i with
+            | None -> ) // fix this
+
+        stones |> List.iter (fun stone -> recordFind n i (List.length res))
+        
+        stones <- res
+
+#!fsharp
+
+let c = Dictionary<uint64, int[]>()
+
+let sw = System.Diagnostics.Stopwatch.StartNew()
+howManyStonesAfter 25 1UL c
+sw.Stop()
+
+printfn "Time: %A" sw.Elapsed
+c
+
+#!fsharp
+
+// Part 1 solution
+let input = parseDay11Input "../data/Day11/input.txt"
+
+input |> display
+
+input |> blinkTimesV2 75 20
+
+// 189167 was the correct solution

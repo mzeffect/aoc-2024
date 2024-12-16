@@ -1,0 +1,167 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"aliases":[],"name":"csharp"},{"aliases":[],"languageName":"fsharp","name":"fsharp"}]}}
+
+#!fsharp
+
+#load "Utils.fs"
+#load "notebook/Array2DFormatter.fs"
+open System
+open System.Collections.Generic
+open NotebookUtils
+open AdventOfCode2024.Utils
+
+#!fsharp
+
+let getInput (fileName: string) =
+    (File.ReadAllText(fileName)) |> splitLines |> Array.map splitToIntArray |> Array.item 0
+
+#!fsharp
+
+type Block =
+    | Gap
+    | FileBlock of int
+
+let expand (input: int array) : Block array =
+    let mutable blocks = []
+    let mutable currentFileId = 0
+
+    for i in 0..input.Length - 1 do
+        let value = input.[i]
+        let isGap = i % 2 <> 0
+        if isGap then
+            blocks <- blocks @ List.init value (fun _ -> Gap)
+        else
+            blocks <- blocks @ List.init value (fun _ -> FileBlock currentFileId)
+            currentFileId <- currentFileId + 1
+            
+    blocks |> List.toArray
+
+#!fsharp
+
+let naiveDefrag (arr: Block[]) =
+    let gaps = arr |> Array.mapi (fun i v -> if v = Gap then i else -1) |> Array.filter (fun i -> i >= 0)
+    let mutable res = Array.copy arr
+    let mutable j = Array.length arr - 1
+    for i in gaps do
+        while j >= 0 && j >= i && res.[j] = Gap do
+            j <- j - 1
+
+        if j >= 0 then
+            res[i] <- res.[j]
+            res[j] <- Gap
+
+    res
+
+#!fsharp
+
+let checksum (arr: Block[]) =
+    arr
+    |> Array.mapi (fun i v ->
+        match v with
+        | FileBlock id -> (id * i) |> uint64
+        | _ -> 0UL)
+    |> Array.sum
+
+#!fsharp
+
+let part1Solution =
+    getInput("data/Day09/examples/09a2.txt")
+    |> expand
+    |> naiveDefrag
+    |> checksum
+part1Solution
+
+#!markdown
+
+## Part 2
+
+#!fsharp
+
+type Length = int
+type FileId = int
+type Location = int
+
+type CompactBlock =
+    | Gap of int * int
+    | File of int * int * int
+
+let expandToCompactBlocks (input: int array) : CompactBlock array =
+    let mutable blocks : CompactBlock list = []
+    let mutable currentFileId = 0
+    let mutable currentLocation = 0
+
+    for i in 0..input.Length - 1 do
+        let value = input.[i]
+        let isGap = i % 2 <> 0
+        if isGap then
+            blocks <- blocks @ [Gap (currentLocation, value)]
+        else
+            blocks <- blocks @ [File (currentLocation, value, currentFileId)]
+            currentFileId <- currentFileId + 1
+        currentLocation <- currentLocation + value
+            
+    blocks |> List.toArray
+
+#!fsharp
+
+let exampleInput = getInput("data/Day09/input.txt")
+
+#!fsharp
+
+let expanded = expandToCompactBlocks exampleInput
+expanded
+
+#!fsharp
+
+let betterDefrag (blocks: CompactBlock[]) =
+    let mutable gaps =
+        blocks
+        |> Array.choose (function
+            | Gap (loc, len) -> Some (loc, len)
+            | _ -> None)
+
+    let mutable files =
+        blocks
+        |> Array.choose (function
+            | File (loc, len, id) -> Some (loc, len, id)
+            | _ -> None)
+        |> Array.rev
+
+    let mutable filei = 0
+    while filei < Array.length files do
+        let (fileLocation, fileLength, fileId) = files.[filei]
+        match gaps |> Array.tryFindIndex (fun (gapLocation, gapLen) -> gapLen >= fileLength && gapLocation < fileLocation) with
+        | Some validGapIndex ->
+            let (gapLocation, gapLength) = gaps.[validGapIndex]
+            files.[filei] <- (fst gaps.[validGapIndex], fileLength, fileId)
+            gaps.[validGapIndex] <- (gapLocation + fileLength, gapLength - fileLength)
+            gaps <- Array.append gaps [| (fileLocation, fileLength) |]
+        | None -> ()
+        filei <- filei + 1
+    
+    let filteredFiles = files |> Array.filter (fun (loc, len, _) -> len > 0)
+    filteredFiles
+
+    
+
+#!fsharp
+
+let defraggedBlocks = betterDefrag expanded
+defraggedBlocks
+
+#!fsharp
+
+let compactChecksum (blocks: (int * int * int)[]) =
+    blocks |> Array.fold (fun acc (loc, len, id) ->
+        let loc = uint64 loc
+        let len = uint64 len
+        let id = uint64 id
+        acc + ([loc..loc+len-1UL] |> List.map (fun pos -> id * pos)|> List.sum)
+    ) 0UL
+
+compactChecksum defraggedBlocks
+
+#!fsharp
+
+display (Array2D.init 10 10 (fun i j -> "hi"))

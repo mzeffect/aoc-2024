@@ -1,0 +1,356 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"aliases":[],"name":"csharp"}]}}
+
+#!fsharp
+
+#load "../Utils.fs"
+#load "./Array2DFormatter.fs"
+open System
+open System.Threading
+open System.Collections.Generic
+open NotebookUtils
+open AdventOfCode2024.Utils 
+
+#!fsharp
+
+let parseDay12Input (fileName: string) =
+    File.ReadAllText(fileName)
+    |> parseToMatrix
+
+#!markdown
+
+### Part 1
+
+#!fsharp
+
+let exampleInput = parseDay12Input "../data/Day12/examples/12b1.txt"
+(exampleInput, Style.charStyler) |> display
+
+#!fsharp
+
+type PlotType =
+    | Plot of char * int
+
+registerArrayFormatter<PlotType>()
+
+let plotStyle : Style.CellStyler<PlotType> =
+    fun _ _ p ->
+        match p with
+        | Plot (c, _) ->
+            let value = int c - int 'A'  // 0-25
+            let hue = (value * 14) % 360  // Spread colors across hue spectrum
+            let saturation = 70  // Vibrant colors
+            let lightness = 60   // Medium brightness for readability
+            let textColor = "white"  // Or use black if you prefer
+            sprintf "background-color: hsl(%d, %d%%, %d%%); color: %s" 
+                hue saturation lightness textColor
+
+let displayPlots (plots: PlotType[,]) =
+    (plots, plotStyle) |> display
+
+#!fsharp
+
+let toPlotGrid (input: char[,]) =
+    input
+    |> Array2D.map (fun c -> Plot (c, 0))
+
+let plots = toPlotGrid exampleInput
+displayPlots plots
+
+#!fsharp
+
+let exploreRegions (plots: PlotType[,]) =
+    let regionMask = Array2D.create (Array2D.length1 plots) (Array2D.length2 plots) 0
+    let lookedAt = HashSet<Pos * Orientation>()
+    let regionPrices = Dictionary<int, int>()
+    let regionAreas = Dictionary<int, int>()
+    let boundaryCells = Dictionary<int, HashSet<Pos>>()
+    let allDirs = [| North; South; East; West |]
+
+    let oppositeDir (dir: Orientation) =
+        match dir with
+        | North -> South
+        | South -> North
+        | East -> West
+        | West -> East
+
+    let canGoInDirection (fromPos: Pos) (region: int) (dir: Orientation) =
+        let newPos = move dir fromPos
+        let boundary = if fromPos < newPos then (fromPos, newPos) else (newPos, fromPos)
+        
+        match isOutsideGrid plots newPos with
+        | true ->
+            // contributes to the price of the region because the outside of the grid is also fenced
+            regionPrices[region] <- regionPrices[region] + 1
+
+            // record as a boundary cell
+            boundaryCells[region].Add(fromPos) |> ignore
+            false
+        | false -> 
+            let (fromX, fromY) = fromPos
+            let (newX, newY) = newPos
+
+            if regionMask.[newX, newY] = region then
+                false
+            else
+                match plots.[fromX, fromY], plots.[newX, newY] with
+                | Plot (a, _), Plot (b, _) when a = b -> true
+                | _ ->
+                    if not (lookedAt.Contains (fromPos, dir)) then do
+                        lookedAt.Add (fromPos, dir) |> ignore
+
+                        // contributes to the price of the region because it's a region boundary, hence a fence
+                        regionPrices[region] <- regionPrices[region] + 1
+                        boundaryCells[region].Add(fromPos) |> ignore
+                    false
+                    
+
+    let rec exploreRegion (fromPos: Pos) (currentDir: Orientation) (region: int) =
+        let x, y = fromPos
+        regionMask.[x, y] <- region
+
+        // contributes to the area of the current region
+        regionAreas[region] <- regionAreas[region] + 1
+
+        let walkDirs = allDirs |> Seq.filter (canGoInDirection fromPos region)
+
+        walkDirs |> Seq.iter (fun d -> (exploreRegion (move d fromPos) d region)) |> ignore
+
+    let tryGetNextStartingPos () =
+        regionMask |> findFirst 0
+
+    let mutable regionId = 0
+    let mutable nextPos = Some((0,0))
+
+    while Option.isSome nextPos do
+        match nextPos with
+        | Some pos ->
+            regionId <- regionId + 1
+            regionPrices[regionId] <- 0
+            regionAreas[regionId] <- 0
+            boundaryCells[regionId] <- HashSet<Pos>()
+
+            exploreRegion pos East regionId
+
+            nextPos <- tryGetNextStartingPos()
+        | None -> ()
+
+    let regionSides =
+        seq {
+            for rid in 1..regionId do
+                printfn "Processing region: %d" rid
+                let cells = boundaryCells[rid]
+                let cellsByRow = cells |> Seq.groupBy fst
+                let v1 = 
+                    cellsByRow
+                    |> Seq.map (fun (row, coords) ->
+                        coords 
+                        |> Seq.map snd
+                        |> Seq.sort
+                        |> Seq.toArray
+                        |> logWith (sprintf "row ys %d" row)
+                        |> Seq.fold (fun (sides, lastY) y ->
+                            if y - 1 > lastY then
+                                (sides + 1, y)
+                            else
+                                (sides, y)
+                        ) (1, snd (Seq.head coords))
+                        |> (fun (sides, _) -> sides)
+                    )
+                    |> Seq.sum
+
+                let cellsByCol = cells |> Seq.groupBy snd
+                let v2 = 
+                    cellsByRow
+                    |> Seq.map (fun (row, coords) ->
+                        coords 
+                        |> Seq.map fst
+                        |> Seq.sort
+                        |> Seq.toArray
+                        |> logWith (sprintf "row ys %d" row)
+                        |> Seq.fold (fun (sides, lastX) x ->
+                            if x - 1 > lastX then
+                                (sides + 1, x)
+                            else
+                                (sides, x)
+                        ) (1, snd (Seq.head coords))
+                        |> (fun (sides, _) -> sides)
+                    )
+                    |> Seq.sum
+                printfn "Result region: %d - %A %A" rid v1 v2
+                yield v1+v2
+        }
+
+    regionMask, regionPrices, regionAreas, boundaryCells, regionSides
+
+#!fsharp
+
+let (regionMask, regionPrices, regionAreas, boundaryCells, regionSides) = exploreRegions plots
+(regionMask, Style.intStyler) |> display
+display (boundaryCells |> Seq.map (fun k v -> Seq.toArray v))
+display regionPrices
+display regionAreas
+display regionSides
+
+#!fsharp
+
+// Handy function that takes two dicts and folds to a sum of applying the zip function to pairs of values with the same key
+let zipFoldDicts (dict1: Dictionary<'k, 'v1>) (dict2: Dictionary<'k, 'v2>) (zipFn: 'v1 -> 'v2 -> 'acc) (accInit: 'acc) =
+    dict1.Keys
+    |> Seq.fold (fun acc key -> 
+        acc + zipFn dict1[key] dict2[key]
+    ) accInit
+
+#!fsharp
+
+// Example solution
+let (_, regionPrices, regionAreas) = exploreRegions plots
+zipFoldDicts regionPrices regionAreas (fun price area -> price * area) 0
+
+#!fsharp
+
+// Part 1 solution
+let part1Input = parseDay12Input "../data/Day12/input.txt"
+part1Input
+|> toPlotGrid
+|> exploreRegions
+|> fun (_, regionPrices, regionAreas) ->
+    zipFoldDicts regionPrices regionAreas
+        (fun price area -> price * area) 0
+
+// correct solution was 1518548
+
+#!markdown
+
+### Part 2
+Since we can already have a region mask and the region areas, we should recalculate the region prices and plop them into the same zipFoldDicts flow.
+
+#!fsharp
+
+(regionMask, Style.intStyler) |> display
+
+#!fsharp
+
+(regionMask, Style.intStyler) |> display
+
+#!fsharp
+
+let countSidesByRegion (regionMask: int[,]) =
+    let sideCounts = Dictionary<int, int>()
+
+    let processLines isRows =
+        let mutable previousBoundaries = Dictionary<int, (int * int) list>()
+        let maxLineIndex = if isRows then Array2D.length1 regionMask - 1 else Array2D.length2 regionMask - 1
+
+        for lineIndex in 0 .. maxLineIndex do
+            // pad the row with faux region 0 so that we can detect the original row edges as boundaries
+            // Get either a row or column and pad it
+            let line = 
+                if isRows then
+                    Array.concat [| [|0|]; regionMask.[lineIndex, *]; [|0|] |]
+                else
+                    Array.concat [| [|0|]; regionMask.[*, lineIndex]; [|0|] |]
+
+            printfn "Processing %s %d: %A" (if isRows then "row" else "column") lineIndex line
+
+            // build up an iterator for consecutive pairs
+            let pairs = Seq.pairwise line
+            let numPairs = Seq.length pairs
+
+            // initialise a dict to store boundaries for the current row
+            let newBoundaries = Dictionary<int, (int * int) list>()
+
+            let isNewSide pos adjacentRegion prevBoundaries region =
+                match List.tryFind (fun (p, _) -> p = pos) prevBoundaries with
+                | None -> 
+                    true  // Never seen this position before
+                | Some (_, prevAdj) -> 
+                    match prevAdj, adjacentRegion with
+                    | prev, adj when prev = adj -> 
+                        // Same adjacent region = continuation
+                        false
+                    | prev, adj when prev = region || adj = region ->
+                        // Either previous or current adjacent is our own region = continuation
+                        false
+                    | _, _ ->
+                        // Different adjacent region (and neither is ourselves) = new side
+                        true
+
+            // for each consecutive region pair
+            pairs
+            |> Seq.iteri (fun i (region1, region2) ->
+                // if not yet in the region side counter, add the region with 0
+                for region in [region1; region2] do
+                    if not (sideCounts.ContainsKey region) then
+                        sideCounts.Add(region, 0)
+
+                // if the regions are different, it's a boundary
+                // check if previous row had the same boundary for the same region, or this is a new side
+                if region1 <> region2 then
+                    //printfn "Found boundary between %d and %d at position %d in %s" 
+                       // region1 region2 i (if isRows then "row" else "column")
+
+                    // Store which region is adjacent for each side of the boundary
+                    let adjacentRegion1 = region2
+                    let adjacentRegion2 = region1
+                    for (region, adjacentRegion) in [(region1, adjacentRegion1); (region2, adjacentRegion2)] do
+                        //printfn "Checking boundary at pos %d between region %d and adjacent region %d" i region adjacentRegion
+                        //printfn "Previous boundaries for region %d: %A" region (previousBoundaries.GetValueOrDefault(region, []))
+                        match previousBoundaries.TryGetValue(region) with
+                        | (true, prevBoundaries) ->
+                            if region = 1 then
+                                printfn "Checking newside at pair i=%d: region=%d adjacent=%d (%A)" i region adjacentRegion prevBoundaries
+                            if isNewSide i adjacentRegion prevBoundaries region then
+                                if region = 1 then
+                                    printfn "NewSide: Incrementing side count for region %d (now %d)" region (sideCounts.[region]+1)
+                                sideCounts.[region] <- sideCounts.[region] + 1
+                            newBoundaries.[region] <- (i, adjacentRegion) :: (newBoundaries.GetValueOrDefault(region, []))
+                        | (false, _) ->
+                            if region = 1 then
+                                printfn "False case: Incrementing side count for region %d (now %d)" region (sideCounts.[region]+1)
+                            sideCounts.[region] <- sideCounts.[region] + 1
+                            newBoundaries.[region] <- (i, adjacentRegion) :: (newBoundaries.GetValueOrDefault(region, []))
+            )
+
+            // reassign previous boundaries to the new ones we've just built up
+            previousBoundaries <- newBoundaries
+
+    // process rows
+    processLines true
+
+    // process columns
+    processLines false
+
+    sideCounts |> Seq.filter (fun kv -> kv.Key <> 0) |> Dictionary
+
+#!fsharp
+
+// Part 2 example solution
+let exampleInput = parseDay12Input "../data/Day12/examples/12b2.txt"
+(exampleInput, Style.charStyler) |> display
+let examplePlots = toPlotGrid exampleInput
+displayPlots examplePlots
+
+let (regionMask, _, regionAreas) = exploreRegions examplePlots
+(regionMask, Style.intStyler) |> display
+
+let regionSides = countSidesByRegion regionMask
+display regionSides
+zipFoldDicts regionSides regionAreas (fun sides area -> sides * area) 0
+
+#!fsharp
+
+(regionMask, Style.intStyler) |> display
+
+#!fsharp
+
+// Part 2 solution
+// Part 2 example solution
+let input = parseDay12Input "../data/Day12/input.txt"
+let plots = toPlotGrid input
+
+let (regionMask, _, regionAreas) = exploreRegions plots
+
+let regionSides = countSidesByRegion regionMask
+zipFoldDicts regionSides regionAreas (fun sides area -> sides * area) 0

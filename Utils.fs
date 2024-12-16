@@ -20,7 +20,7 @@ let splitWordsToIntArray (line: string) = line |> splitWords |> Array.map int
 let splitWordsToIntArrayBy (separator: char) (line: string) =
     line |> splitWordsBy separator |> Array.map int
 
-let splitToIntArray (input: string) : int[] =
+let splitToIntArray (input: string) : int [] =
     input.ToCharArray()
     |> Array.map (fun c -> int c - int '0')
 
@@ -32,7 +32,7 @@ let inRange n (min, max) = min <= n && n < max
 
 // Array operations
 
-let getMiddleElement (arr: 'a[]) =
+let getMiddleElement (arr: 'a []) =
     let middleIndex = Array.length arr / 2
     arr.[middleIndex]
 
@@ -68,12 +68,12 @@ let parseToMatrixWith (parseElement: char -> 'a) (input: string) =
     Array2D.init width height (fun x y -> lines.[x].[y] |> parseElement)
 
 let charToInt (c: char) = (int c) - (int '0')
-    
-let gridSize (arr: 'a[,]) =
+
+let gridSize (arr: 'a [,]) =
     arr |> Array2D.length1, arr |> Array2D.length2
 
 /// Returns a transposed matrix.
-let transpose (arr: 'a[,]) =
+let transpose (arr: 'a [,]) =
     let rows = Array2D.length1 arr
     let cols = Array2D.length2 arr
     Array2D.init cols rows (fun i j -> arr.[j, i])
@@ -81,11 +81,11 @@ let transpose (arr: 'a[,]) =
 let findFirst (value: 'a) (array2d: 'a [,]) =
     let rows = Array2D.length1 array2d
     let cols = Array2D.length2 array2d
-    
+
     seq {
         for i in 0 .. rows - 1 do
             for j in 0 .. cols - 1 do
-                if array2d.[i,j] = value then
+                if array2d.[i, j] = value then
                     yield Some(i, j)
     }
     |> Seq.tryHead
@@ -101,25 +101,35 @@ let byColumns grid =
 
 /// Returns a new grid with rows shifted in such a way that diagonals become verticals.
 /// Pads the grid with '.', a character we don't care about.
-let diagonalToVerticalShift shiftDirection (grid: char[,]) =
+let diagonalToVerticalShift shiftDirection (grid: char [,]) =
     let rows = Array2D.length1 grid
     let cols = Array2D.length2 grid
     let padding = '.'
 
     Array2D.init rows (rows + cols - 1) (fun r c ->
-        let col = c - (if shiftDirection = ShiftRight then r else (rows - 1 - r))
+        let col =
+            c
+            - (if shiftDirection = ShiftRight then
+                   r
+               else
+                   (rows - 1 - r))
 
-        if col >= 0 && col < cols then grid.[r, col] else padding)
+        if col >= 0 && col < cols then
+            grid.[r, col]
+        else
+            padding)
 
 /// Returns whether the given character array matches the given string.
-let charsMatchString (str: string) (chars: char[]) =
+let charsMatchString (str: string) (chars: char []) =
     let patternArray = str.ToCharArray()
     chars = patternArray
 
 /// Returns whether the given character array matches the given string in either direction.
-let charsMatchStringUnidirectional (str: string) (chars: char[]) =
+let charsMatchStringUnidirectional (str: string) (chars: char []) =
     let patternArray = str.ToCharArray()
-    chars = patternArray || chars = Array.rev patternArray
+
+    chars = patternArray
+    || chars = Array.rev patternArray
 
 type Pos = int * int
 
@@ -152,11 +162,15 @@ let move (orientation: Orientation) (currentPos: Pos) =
     | South -> (x + 1, y)
     | East -> (x, y + 1)
     | West -> (x, y - 1)
-    
-let isOutsideGrid (m: 'a[,]) (pos: Pos) =
+
+let isOutsideGrid (m: 'a [,]) (pos: Pos) =
     let (x, y) = pos
-    x < 0 || x >= Array2D.length1 m || y < 0 || y >= Array2D.length2 m
-    
+
+    x < 0
+    || x >= Array2D.length1 m
+    || y < 0
+    || y >= Array2D.length2 m
+
 let isOutsideGridDimensions (dim: int * int) (pos: Pos) =
     let (x, y) = pos
     x < 0 || x >= fst dim || y < 0 || y >= snd dim
@@ -178,27 +192,27 @@ let hashSetCount (set: HashSet<'a>) = set.Count
 type Vec = int * int
 
 module Vec =
-    let subtract (x1,y1) (x2,y2) : Vec = 
-        (x2 - x1, y2 - y1)  // Vector from p1 to p2
-        
-    let add (x1,y1) (x2,y2) : Pos = 
-        (x1 + x2, y1 + y2)
-        
-    let scale n (x,y) : Vec =
-        (n*x, n*y)
-        
-    let manhattan (x,y) = 
-        abs x + abs y
-        
-    let length (x,y) =
-        sqrt(float(x * x + y * y))
-        
+    let subtract (x1, y1) (x2, y2) : Vec = (x2 - x1, y2 - y1) // Vector from p1 to p2
+
+    let add (x1, y1) (x2, y2) : Pos = (x1 + x2, y1 + y2)
+
+    let scale n (x, y) : Vec = (n * x, n * y)
+
+    let manhattan (x, y) = abs x + abs y
+
+    let length (x, y) = sqrt (float (x * x + y * y))
+
     // Some common vectors
-    let up = (0,-1)
-    let down = (0,1)
-    let left = (-1,0)
-    let right = (1,0)
+    let up = (0, -1)
+    let down = (0, 1)
+    let left = (-1, 0)
+    let right = (1, 0)
 
 let logWith (f: string) (thing: 'a) =
     printfn $"%s{f}: %A{thing}"
     thing
+
+// Handy function that takes two dicts and folds to a sum of applying the zip function to pairs of values with the same key
+let zipFoldDicts (dict1: Dictionary<'k, 'v1>) (dict2: Dictionary<'k, 'v2>) (zipFn: 'v1 -> 'v2 -> 'acc) (accInit: 'acc) =
+    dict1.Keys
+    |> Seq.fold (fun acc key -> acc + zipFn dict1[key] dict2[key]) accInit

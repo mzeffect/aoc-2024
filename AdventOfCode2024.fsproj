@@ -32,6 +32,8 @@
     <Compile Include="Day12a.fs" />
     <Compile Include="Day13a.fs" />
     <Compile Include="Day14a.fs" />
+    <Compile Include="Day19a.fs" />
+    <Compile Include="Day19b.fs" />
     <Compile Include="Solvers.fs" />
     <Compile Include="Program.fs" />
     <Content Include="data\**" />
